@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>密码生成器</title>
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    height: 100vh; margin: 0;
+    background: linear-gradient(135deg,#6e8efb,#a777e3); color: #333;
+}
+.container {
+    text-align: center; padding: 30px; background: #fff;
+    border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 420px; max-width: 95%;
+}
+h2 { color: #2c3e50; margin-bottom: 25px; }
+.input-group {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; margin: 20px 0;
+}
+input {
+    padding: 10px; width: 3em; border: 2px solid #ddd; border-radius: 6px;
+    font-size: 16px; text-align: center; transition: border-color .3s;
+}
+input:focus { border-color: #6e8efb; outline: none; }
+button {
+    padding: 10px 14px; border: none; border-radius: 6px;
+    font-size: 15px; cursor: pointer; color: #fff; transition: background-color .3s;
+}
+#generateButton { background: #3498db; }
+#generateButton:hover { background: #2980b9; }
+#clearButton { background: #e74c3c; }
+#clearButton:hover { background: #c0392b; }
+#copyButton { background: #2ecc71; margin-left: 10px; }
+#copyButton:hover { background: #27ae60; }
+#copyButton:disabled { background: #95a5a6; cursor: not-allowed; }
+.password-container {
+    display: flex; align-items: center; justify-content: center; margin: 20px 0;
+}
+#passwordOutput {
+    flex-grow: 1; text-align: center; min-height: 20px;
+    margin: 0; padding: 15px; border-radius: 6px;
+    border: 1px solid #e9ecef; background: #f8f9fa;
+    font: bold 18px 'Courier New', monospace; color: #2c3e50;
+}
+.message {
+    margin: 15px 0; padding: 10px;
+    border-radius: 4px; font-weight: 500; display: none;
+}
+.error { background: #ffecec; color: #e74c3c; border: 1px solid #f5b7b1; }
+.success { background: #eafaf1; color: #27ae60; border: 1px solid #a3e4d7; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h2>🔐 密码生成器</h2>
+    <div class="input-group">
+        <input id="inputChars" type="text" maxlength="3" placeholder="3位"
+               oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,''); if(this.value.length===3) generatePassword();">
+        <button id="generateButton" onclick="generatePassword()">生成</button>
+        <button id="clearButton" onclick="clearInput()">清除</button>
+    </div>
+    <div class="password-container">
+        <div id="passwordOutput"></div>
+        <button id="copyButton" onclick="copyPassword()" disabled>复制</button>
+    </div>
+    <div id="errorMessage" class="message error"></div>
+    <div id="successMessage" class="message success"></div>
+</div>
+
+<script>
+const charset = {
+    letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+    digits: '0123456789',
+    symbols: '?!:<>=&,._-/+*'
+};
+const $ = id => document.getElementById(id);
+const inputEl = $('inputChars'), outputEl = $('passwordOutput');
+const errorEl = $('errorMessage'), successEl = $('successMessage');
+const copyBtn = $('copyButton');
+
+const showMsg = (el, text) => {
+    [errorEl, successEl].forEach(e => e.style.display='none');
+    if (text) { el.textContent=text; el.style.display='block'; }
+};
+
+const hashCode = (str, salt=27) => {
+    let h = salt;
+    for (let ch of str) h=((h*31)+ch.charCodeAt(0))&0x7FFFFFFF;
+    return h;
+};
+
+function generatePassword() {
+    const val = inputEl.value;
+    if (!/^[a-zA-Z0-9]{3}$/.test(val)) {
+        showMsg(errorEl,'请输入正好3个字母或数字！');
+        outputEl.textContent=''; copyBtn.disabled=true; 
+        return;
+    }
+
+    // 取消输入框焦点
+    inputEl.blur();
+
+    let seed = hashCode(val);
+    const random = max => {
+        const a=1664525, c=1013904223, m=2**32;
+        seed=(a*seed+c)%m; return Math.floor(seed/m*max);
+    };
+    const pick=(pool,n)=>Array.from({length:n},()=>pool[random(pool.length)]);
+    let pwd=[...pick(charset.letters,4),...pick(charset.digits,4),...pick(charset.symbols,2)];
+    for(let i=pwd.length-1;i>0;i--){const j=random(i+1);[pwd[i],pwd[j]]=[pwd[j],pwd[i]];}
+    outputEl.textContent=pwd.join(''); copyBtn.disabled=false;
+
+    // 自动复制密码
+    copyPassword();
+}
+
+function copyPassword() {
+    const txt=outputEl.textContent;
+    if(!txt) return showMsg(errorEl,'没有密码可复制！');
+    const done=()=>{showMsg(successEl,'密码已生成并复制到剪贴板！'); setTimeout(()=>successEl.style.display='none',3000);};
+    if(navigator.clipboard?.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));}
+    else fallbackCopy(txt,done);
+}
+
+function fallbackCopy(txt,done){
+    const ta=document.createElement("textarea");
+    ta.value=txt; ta.style.position="fixed"; ta.style.left="-9999px"; document.body.appendChild(ta);
+    ta.select(); try{ if(document.execCommand('copy')) done(); else throw 0; }
+    catch{ showMsg(errorEl,'复制失败，请手动选择密码并复制'); }
+    document.body.removeChild(ta);
+}
+
+function clearInput(){
+    inputEl.value=''; outputEl.textContent=''; copyBtn.disabled=true;
+    [errorEl,successEl].forEach(e=>e.style.display='none');
+    inputEl.focus();
+}
+
+// 页面加载时自动聚焦输入框
+window.onload = () => inputEl.focus();
+</script>
+</body>
+</html>

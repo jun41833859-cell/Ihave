@@ -87,13 +87,75 @@ const showMsg = (el, text) => {
     if (text) { el.textContent=text; el.style.display='block'; }
 };
 
-const hashCode = (str, salt=27) => {
-    let h = salt;
-    for (let ch of str) h=((h*31)+ch.charCodeAt(0))&0x7FFFFFFF;
-    return h;
-};
+// --- START: NEW SHA-256 AND PASSWORD GENERATION LOGIC ---
 
-function generatePassword() {
+/**
+ * 使用 Web Crypto API 计算输入字符串的 SHA-256 哈希值（返回十六进制字符串）。
+ * @param {string} str - 待哈希的输入字符串 (3位字符)。
+ * @returns {Promise<string>} - SHA-256 哈希值（64位十六进制字符串）。
+ */
+async function sha256(str) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    // 转换为十六进制字符串
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * 从 SHA-256 哈希值中确定性地选取和排列字符，替代伪随机数生成器。
+ * @param {string} hash - SHA-256 哈希值（64位十六进制字符串）。
+ * @returns {string} - 生成的10位密码。
+ */
+function generateFromHash(hash) {
+    // 密码构成: 4字母 + 4数字 + 2符号 = 10位
+    const charCounts = [
+        { pool: charset.letters, count: 4 },
+        { pool: charset.digits, count: 4 },
+        { pool: charset.symbols, count: 2 }
+    ];
+
+    let password = [];
+    let hashIndex = 0;
+
+    // 1. 确定性选取字符
+    for (const { pool, count } of charCounts) {
+        for (let i = 0; i < count; i++) {
+            // 从哈希值中提取下一个字节（两个十六进制字符）
+            const hex = hash.substring(hashIndex, hashIndex + 2);
+            // 转换为数字，并模池长度，得到字符索引
+            const val = parseInt(hex, 16);
+            const index = val % pool.length;
+            password.push(pool[index]);
+
+            // 移动到哈希的下一个字节，循环使用哈希值（SHA-256有32字节/64十六进制字符）
+            hashIndex = (hashIndex + 2) % hash.length;
+        }
+    }
+
+    // 2. 确定性打乱顺序 (基于哈希值进行Fisher-Yates洗牌)
+    // 从哈希中获取一个新的起点进行混淆
+    hashIndex = 0;
+    for (let i = password.length - 1; i > 0; i--) {
+        const hex = hash.substring(hashIndex, hashIndex + 2);
+        const val = parseInt(hex, 16);
+        
+        // 生成一个位于 [0, i] 区间的确定性索引
+        const j = val % (i + 1);
+        
+        // 交换
+        [password[i], password[j]] = [password[j], password[i]];
+        
+        // 移动到哈希的下一个字节
+        hashIndex = (hashIndex + 2) % hash.length;
+    }
+
+    return password.join('');
+}
+
+
+async function generatePassword() {
     const val = inputEl.value;
     if (!/^[a-zA-Z0-9]{3}$/.test(val)) {
         showMsg(errorEl,'请输入正好3个字母或数字！');
@@ -104,24 +166,32 @@ function generatePassword() {
     // 取消输入框焦点
     inputEl.blur();
 
-    let seed = hashCode(val);
-    const random = max => {
-        const a=1664525, c=1013904223, m=2**32;
-        seed=(a*seed+c)%m; return Math.floor(seed/m*max);
-    };
-    const pick=(pool,n)=>Array.from({length:n},()=>pool[random(pool.length)]);
-    let pwd=[...pick(charset.letters,4),...pick(charset.digits,4),...pick(charset.symbols,2)];
-    for(let i=pwd.length-1;i>0;i--){const j=random(i+1);[pwd[i],pwd[j]]=[pwd[j],pwd[i]];}
-    outputEl.textContent=pwd.join(''); copyBtn.disabled=false;
+    try {
+        // 1. 生成 SHA-256 哈希值作为确定性种子
+        const hash = await sha256(val);
+        
+        // 2. 根据哈希值生成密码
+        const pwd = generateFromHash(hash);
 
-    // 自动复制密码
-    copyPassword();
+        outputEl.textContent = pwd;
+        copyBtn.disabled = false;
+
+        // 自动复制密码
+        copyPassword();
+    } catch(e) {
+        console.error("密码生成失败:", e);
+        showMsg(errorEl, '密码生成失败，请检查浏览器支持。');
+        outputEl.textContent=''; copyBtn.disabled=true;
+    }
 }
+
+// --- END: NEW SHA-256 AND PASSWORD GENERATION LOGIC ---
 
 function copyPassword() {
     const txt=outputEl.textContent;
     if(!txt) return showMsg(errorEl,'没有密码可复制！');
     const done=()=>{showMsg(successEl,'密码已生成并复制到剪贴板！'); setTimeout(()=>successEl.style.display='none',3000);};
+    // 使用 Web Crypto API 的复制是异步的，原函数需改为异步或保持同步处理
     if(navigator.clipboard?.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));}
     else fallbackCopy(txt,done);
 }

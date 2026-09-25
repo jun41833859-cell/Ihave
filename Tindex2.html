@@ -1,142 +1,566 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>密码生成器</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>离线确定性密码生成器</title>
 <style>
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex; justify-content: center; align-items: center;
-    height: 100vh; margin: 0;
-    background: linear-gradient(135deg,#6e8efb,#a777e3); color: #333;
-}
-.container {
-    text-align: center; padding: 30px; background: #fff;
-    border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    width: 420px; max-width: 95%;
-}
-h2 { color: #2c3e50; margin-bottom: 25px; }
-.input-group {
-    display: flex; justify-content: center; align-items: center;
-    gap: 8px; margin: 20px 0;
-}
-input {
-    padding: 10px; width: 3em; border: 2px solid #ddd; border-radius: 6px;
-    font-size: 16px; text-align: center; transition: border-color .3s;
-}
-input:focus { border-color: #6e8efb; outline: none; }
-button {
-    padding: 10px 14px; border: none; border-radius: 6px;
-    font-size: 15px; cursor: pointer; color: #fff; transition: background-color .3s;
-}
-#generateButton { background: #3498db; }
-#generateButton:hover { background: #2980b9; }
-#clearButton { background: #e74c3c; }
-#clearButton:hover { background: #c0392b; }
-#copyButton { background: #2ecc71; margin-left: 10px; }
-#copyButton:hover { background: #27ae60; }
-#copyButton:disabled { background: #95a5a6; cursor: not-allowed; }
-.password-container {
-    display: flex; align-items: center; justify-content: center; margin: 20px 0;
-}
-#passwordOutput {
-    flex-grow: 1; text-align: center; min-height: 20px;
-    margin: 0; padding: 15px; border-radius: 6px;
-    border: 1px solid #e9ecef; background: #f8f9fa;
-    font: bold 18px 'Courier New', monospace; color: #2c3e50;
-}
-.message {
-    margin: 15px 0; padding: 10px;
-    border-radius: 4px; font-weight: 500; display: none;
-}
-.error { background: #ffecec; color: #e74c3c; border: 1px solid #f5b7b1; }
-.success { background: #eafaf1; color: #27ae60; border: 1px solid #a3e4d7; }
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px 90px;
+    background: #F3EDF7;
+    color: #1C1B1F;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: #FFFBFE;
+    border-radius: 28px;
+    padding: 28px 24px 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.08);
+  }
+
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+
+  .sub {
+    margin: 0 0 22px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #49454F;
+  }
+
+  .field { margin-bottom: 16px; }
+
+  .field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #49454F;
+    margin: 0 0 6px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1C1B1F;
+    background: #FFFBFE;
+    border: 1px solid #79747E;
+    border-radius: 12px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="text"]::placeholder { color: #9A94A0; }
+  input[type="text"]:focus {
+    border-color: #6750A4;
+    box-shadow: 0 0 0 3px rgba(103,80,164,.16);
+  }
+
+  .hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #79747E;
+  }
+
+  /* ---- 开关 ---- */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 4px 0 20px;
+  }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 32px;
+    flex: none;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .track {
+    position: absolute;
+    inset: 0;
+    background: #E7E0EC;
+    border: 2px solid #79747E;
+    border-radius: 16px;
+    transition: background .2s, border-color .2s;
+  }
+  .track::before {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #79747E;
+    transition: all .2s;
+  }
+  .switch input:checked + .track {
+    background: #6750A4;
+    border-color: #6750A4;
+  }
+  .switch input:checked + .track::before {
+    left: 22px;
+    top: 2px;
+    width: 24px;
+    height: 24px;
+    background: #FFFBFE;
+  }
+
+  /* ---- 按钮 ---- */
+  .btn {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: inherit;
+    border: none;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-primary { background: #6750A4; color: #FFFFFF; margin-bottom: 18px; }
+  .btn-primary:hover { background: #5A458F; }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+
+  .btn-row { display: flex; gap: 12px; }
+
+  .btn-outline {
+    background: transparent;
+    color: #6750A4;
+    border: 1px solid #79747E;
+  }
+  .btn-outline:hover { background: rgba(103,80,164,.08); }
+
+  /* ---- 输出区 ---- */
+  .output {
+    margin: 0 0 18px;
+    min-height: 78px;
+    padding: 18px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 16px;
+    background: #F3EDF7;
+    color: #1C1B1F;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+    font-size: 18px;
+    letter-spacing: .5px;
+    line-height: 1.45;
+    word-break: break-all;
+    user-select: all;
+    -webkit-user-select: all;
+    transition: background .2s;
+  }
+  .output.placeholder {
+    color: #79747E;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .output.filled { background: #EADDFF; }
+
+  /* ---- Snackbar ---- */
+  #snackbar {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    max-width: min(90vw, 420px);
+    padding: 14px 18px;
+    background: #322F35;
+    color: #F5EFF7;
+    font-size: 14px;
+    line-height: 1.4;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    opacity: 0;
+    transform: translate(-50%, 90px);
+    transition: transform .25s ease, opacity .25s ease;
+    pointer-events: none;
+    z-index: 99;
+  }
+  #snackbar.show { opacity: 1; transform: translate(-50%, 0); }
 </style>
 </head>
 <body>
-<div class="container">
-    <h2>🔐 密码生成器</h2>
-    <div class="input-group">
-        <input id="inputChars" type="text" maxlength="3" placeholder="3位"
-               oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,''); if(this.value.length===3) generatePassword();">
-        <button id="generateButton" onclick="generatePassword()">生成</button>
-        <button id="clearButton" onclick="clearInput()">清除</button>
+
+  <main class="card">
+    <h1>离线确定性密码生成器</h1>
+    <p class="sub">相同输入 → 相同输出。全程在浏览器本地计算，不联网、不上传、不保存。</p>
+
+    <div class="field">
+      <label class="field-label" for="edtInput">输入</label>
+      <input id="edtInput" type="text" placeholder="例如：Ab12"
+             autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <p class="hint">仅允许字母和数字，至少 2 位，最多取前 20 位；实际参与计算的是前 4 位。</p>
     </div>
-    <div class="password-container">
-        <div id="passwordOutput"></div>
-        <button id="copyButton" onclick="copyPassword()" disabled>复制</button>
+
+    <div class="field">
+      <label class="field-label" for="edtSalt">盐（可选）</label>
+      <input id="edtSalt" type="text" placeholder="可以为空，任意字符"
+             autocomplete="off" autocapitalize="off" spellcheck="false" />
     </div>
-    <div id="errorMessage" class="message error"></div>
-    <div id="successMessage" class="message success"></div>
-</div>
+
+    <div class="switch-row">
+      <span class="field-label" style="margin:0">包含符号</span>
+      <label class="switch">
+        <input id="switchSymbol" type="checkbox" />
+        <span class="track"></span>
+      </label>
+    </div>
+
+    <button id="btnGenerate" class="btn btn-primary" type="button">生成密码</button>
+
+    <div id="tvPasswordOutput" class="output placeholder">密码将显示在这里</div>
+
+    <div class="btn-row">
+      <button id="btnCopy" class="btn btn-outline" type="button">复制</button>
+      <button id="btnClear" class="btn btn-outline" type="button">清除</button>
+    </div>
+  </main>
+
+  <div id="snackbar" role="status" aria-live="polite"></div>
 
 <script>
-const charset = {
-    letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-    digits: '0123456789',
-    symbols: '?!:<>=&,._-/+*'
-};
-const $ = id => document.getElementById(id);
-const inputEl = $('inputChars'), outputEl = $('passwordOutput');
-const errorEl = $('errorMessage'), successEl = $('successMessage');
-const copyBtn = $('copyButton');
+(function () {
+  "use strict";
 
-const showMsg = (el, text) => {
-    [errorEl, successEl].forEach(e => e.style.display='none');
-    if (text) { el.textContent=text; el.style.display='block'; }
-};
+  /* ============================================================
+   *  常量 —— 严格对应 PasswordGenerator.kt
+   * ============================================================ */
+  const UPPER   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const LOWER   = "abcdefghijklmnopqrstuvwxyz";
+  const DIGIT   = "0123456789";
+  const SYMBOL  = ".!?*@#&-+:";          // 注意：与 Kotlin 完全一致
 
-const hashCode = (str, salt=27) => {
-    let h = salt;
-    for (let ch of str) h=((h*31)+ch.charCodeAt(0))&0x7FFFFFFF;
-    return h;
-};
+  const MIN_PER_CATEGORY   = 2;          // 每个启用类别的最少字符数
+  const MAX_INPUT_LENGTH   = 20;         // 主输入最大长度
+  const EFFECTIVE_LENGTH   = 4;          // 实际参与计算的前 N 位
+  const MIN_PASSWORD_LENGTH = 11;        // 密码长度下限
+  const LENGTH_MODULO      = 6;          // length = (ascii % 6) + 11 → 11~16
 
-function generatePassword() {
-    const val = inputEl.value;
-    if (!/^[a-zA-Z0-9]{3}$/.test(val)) {
-        showMsg(errorEl,'请输入正好3个字母或数字！');
-        outputEl.textContent=''; copyBtn.disabled=true; return;
+  const VALID_INPUT_REGEX  = /^[A-Za-z0-9]+$/;
+
+  const PLACEHOLDER        = "密码将显示在这里";
+  const AUTO_CLEAR_MS      = 30000;      // 复制后自动清空剪贴板
+
+  /* ============================================================
+   *  纯 JS SHA-256（单次哈希，无迭代；file:// 下也能跑）
+   * ============================================================ */
+  const SHA256_K = new Uint32Array([
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ]);
+
+  function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+
+  /** @param {Uint8Array} data @returns {Uint8Array} 32 字节摘要 */
+  function sha256Bytes(data) {
+    const H = new Uint32Array([
+      0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
+      0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19
+    ]);
+
+    const len    = data.length;
+    const bitLen = len * 8;
+    const total  = Math.ceil((len + 9) / 64) * 64;
+
+    const msg = new Uint8Array(total);
+    msg.set(data);
+    msg[len] = 0x80;
+
+    const dv = new DataView(msg.buffer);
+    dv.setUint32(total - 8, Math.floor(bitLen / 4294967296), false);
+    dv.setUint32(total - 4, bitLen >>> 0, false);
+
+    const w = new Uint32Array(64);
+
+    for (let off = 0; off < total; off += 64) {
+      for (let t = 0; t < 16; t++) w[t] = dv.getUint32(off + t * 4, false);
+
+      for (let t = 16; t < 64; t++) {
+        const a = w[t - 15], b = w[t - 2];
+        const s0 = (rotr(a, 7) ^ rotr(a, 18) ^ (a >>> 3)) >>> 0;
+        const s1 = (rotr(b, 17) ^ rotr(b, 19) ^ (b >>> 10)) >>> 0;
+        w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+      }
+
+      let a = H[0], b = H[1], c = H[2], d = H[3];
+      let e = H[4], f = H[5], g = H[6], h = H[7];
+
+      for (let t = 0; t < 64; t++) {
+        const S1  = (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) >>> 0;
+        const ch  = ((e & f) ^ (~e & g)) >>> 0;
+        const t1  = (h + S1 + ch + SHA256_K[t] + w[t]) >>> 0;
+
+        const S0  = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) >>> 0;
+        const maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+        const t2  = (S0 + maj) >>> 0;
+
+        h = g; g = f; f = e;
+        e = (d + t1) >>> 0;
+        d = c; c = b; b = a;
+        a = (t1 + t2) >>> 0;
+      }
+
+      H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0;
+      H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+      H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0;
+      H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
     }
-    let seed = hashCode(val);
-    const random = max => {
-        const a=1664525,c=1013904223,m=2**32;
-        seed=(a*seed+c)%m; return Math.floor(seed/m*max);
-    };
-    const pick=(pool,n)=>Array.from({length:n},()=>pool[random(pool.length)]);
-    let pwd=[...pick(charset.letters,4),...pick(charset.digits,4),...pick(charset.symbols,2)];
-    for(let i=pwd.length-1;i>0;i--){const j=random(i+1);[pwd[i],pwd[j]]=[pwd[j],pwd[i]];}
-    outputEl.textContent=pwd.join(''); copyBtn.disabled=false;
 
-    // 自动复制
-    copyPassword();
-}
+    const out = new Uint8Array(32);
+    const odv = new DataView(out.buffer);
+    for (let i = 0; i < 8; i++) odv.setUint32(i * 4, H[i], false);
+    return out;
+  }
 
-function copyPassword() {
-    const txt=outputEl.textContent;
-    if(!txt) return showMsg(errorEl,'没有密码可复制！');
-    const done=()=>{showMsg(successEl,'密码已生成并复制到剪贴板！');setTimeout(()=>successEl.style.display='none',3000);};
-    if(navigator.clipboard?.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));}
-    else fallbackCopy(txt,done);
-}
+  /* ============================================================
+   *  HashUtil.kt  →  sha256(input)
+   * ============================================================ */
+  const HashUtil = {
+    sha256(str) {
+      return sha256Bytes(new TextEncoder().encode(str));
+    }
+  };
 
-function fallbackCopy(txt,done){
-    const ta=document.createElement("textarea");
-    ta.value=txt; ta.style.position="fixed"; ta.style.left="-9999px"; document.body.appendChild(ta);
-    ta.select(); try{ if(document.execCommand('copy')) done(); else throw 0; }
-    catch{ showMsg(errorEl,'复制失败，请手动选择密码并复制'); }
-    document.body.removeChild(ta);
-}
+  /* ============================================================
+   *  DeterministicRandom.kt
+   * ============================================================ */
+  class DeterministicRandom {
+    constructor(hash) {
+      if (!hash || hash.length === 0) throw new Error("hash 不能为空");
+      this.hash = hash;
+      this.index = 0;
+    }
 
-function clearInput(){
-    inputEl.value=''; outputEl.textContent=''; copyBtn.disabled=true;
-    [errorEl,successEl].forEach(e=>e.style.display='none');
-    inputEl.focus();
-}
+    /** 读取下一个字节，0..255 */
+    nextByte() {
+      const value = this.hash[this.index % this.hash.length] & 0xFF;
+      this.index++;
+      return value;
+    }
 
-// 页面加载时自动聚焦输入框
-window.onload = () => inputEl.focus();
+    /** [0, bound) 区间内的确定性伪随机整数 */
+    nextInt(bound) {
+      if (bound <= 0) throw new Error("bound 必须大于 0");
+      return this.nextByte() % bound;
+    }
+  }
+
+  /* ============================================================
+   *  PasswordGenerator.kt
+   * ============================================================ */
+  const PasswordGenerator = {
+    /**
+     * @param {string} rawInput  主输入（未截断）
+     * @param {string} rawSalt   盐，可为空
+     * @param {boolean} useSymbols 是否启用符号类别
+     * @returns {{ok:true, password:string} | {ok:false, message:string}}
+     */
+    generate(rawInput, rawSalt, useSymbols) {
+      // 1. 限制最大长度 20
+      const input = rawInput.slice(0, MAX_INPUT_LENGTH);
+
+      // 2. 合法性校验
+      if (input.length === 0) {
+        return { ok: false, message: "请输入内容" };
+      }
+      if (!VALID_INPUT_REGEX.test(input)) {
+        return { ok: false, message: "输入包含非法字符" };
+      }
+      if (input.length < 2) {
+        return { ok: false, message: "输入长度不足" };
+      }
+
+      // 3. 截取前 4 字符
+      const input4 = input.slice(0, EFFECTIVE_LENGTH);
+
+      // 4. 盐原样使用
+      const salt = rawSalt;
+
+      // 5. 密码长度 = (第二个字符 ASCII % 6) + 11 → 11~16
+      const secondCharCode = input4.charCodeAt(1);
+      const length = (secondCharCode % LENGTH_MODULO) + MIN_PASSWORD_LENGTH;
+
+      // 6. 固定格式的哈希输入
+      const hashSource = input4 + "|" + salt;
+
+      // 7. SHA-256（单次，唯一熵源）
+      const hash = HashUtil.sha256(hashSource);
+
+      // 8. 初始化确定性随机源
+      const rng = new DeterministicRandom(hash);
+
+      // 9. 参与的字符类别（顺序不可变）
+      const pools = [UPPER, LOWER, DIGIT];
+      if (useSymbols) pools.push(SYMBOL);
+
+      // 10. 每个类别先各出 MIN_PER_CATEGORY 个字符
+      const chars = [];
+      for (const pool of pools) {
+        for (let i = 0; i < MIN_PER_CATEGORY; i++) {
+          chars.push(pool[rng.nextInt(pool.length)]);
+        }
+      }
+
+      // 11. 剩余长度：先随机挑类别，再随机挑字符
+      const remaining = length - chars.length;
+      if (remaining > 0) {
+        for (let i = 0; i < remaining; i++) {
+          const pool = pools[rng.nextInt(pools.length)];
+          chars.push(pool[rng.nextInt(pool.length)]);
+        }
+      } else if (remaining < 0) {
+        // 兜底：优先满足密码长度（理论上不会触发）
+        while (chars.length > length) chars.pop();
+      }
+
+      // 12. 确定性 Fisher-Yates 洗牌（同一熵源继续读取）
+      for (let i = chars.length - 1; i >= 1; i--) {
+        const j = rng.nextInt(i + 1);
+        const tmp = chars[i];
+        chars[i] = chars[j];
+        chars[j] = tmp;
+      }
+
+      // 13. 输出纯密码字符串
+      return { ok: true, password: chars.join("") };
+    }
+  };
+
+  /* ============================================================
+   *  UI 层 —— 对应 MainActivity + MainViewModel
+   * ============================================================ */
+  const edtInput         = document.getElementById("edtInput");
+  const edtSalt          = document.getElementById("edtSalt");
+  const switchSymbol     = document.getElementById("switchSymbol");
+  const tvPasswordOutput = document.getElementById("tvPasswordOutput");
+  const btnGenerate      = document.getElementById("btnGenerate");
+  const btnCopy          = document.getElementById("btnCopy");
+  const btnClear         = document.getElementById("btnClear");
+  const snackbarEl       = document.getElementById("snackbar");
+
+  /** 对应 MainViewModel.password：仅存内存，不做持久化 */
+  let currentPassword = "";
+  let snackTimer = null;
+
+  function showSnackbar(message) {
+    snackbarEl.textContent = message;
+    snackbarEl.classList.add("show");
+    clearTimeout(snackTimer);
+    snackTimer = setTimeout(() => snackbarEl.classList.remove("show"), 2500);
+  }
+
+  function renderPassword(pwd) {
+    if (pwd) {
+      tvPasswordOutput.textContent = pwd;
+      tvPasswordOutput.classList.remove("placeholder");
+      tvPasswordOutput.classList.add("filled");
+    } else {
+      tvPasswordOutput.textContent = PLACEHOLDER;
+      tvPasswordOutput.classList.add("placeholder");
+      tvPasswordOutput.classList.remove("filled");
+    }
+  }
+
+  /* ---------- ClipboardUtil.copyAndAutoClear ---------- */
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      ok ? resolve() : reject(new Error("copy failed"));
+    });
+  }
+
+  /* ---------- setupListeners ---------- */
+
+  function onGenerate() {
+    const input      = edtInput.value;
+    const salt       = edtSalt.value;
+    const useSymbols = switchSymbol.checked;
+
+    btnGenerate.disabled = true;
+    requestAnimationFrame(() => {
+      const result = PasswordGenerator.generate(input, salt, useSymbols);
+
+      if (result.ok) {
+        // 对应 ViewModel：Success 时更新密码、清空错误
+        currentPassword = result.password;
+        renderPassword(currentPassword);
+      } else {
+        // 对应 ViewModel：Error 时只抛出错误提示，password 保持原值
+        showSnackbar(result.message);
+      }
+
+      btnGenerate.disabled = false;
+    });
+  }
+
+  btnGenerate.addEventListener("click", onGenerate);
+
+  [edtInput, edtSalt].forEach((el) => {
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); onGenerate(); }
+    });
+  });
+
+  btnCopy.addEventListener("click", () => {
+    if (!currentPassword) return;
+    copyText(currentPassword)
+      .then(() => {
+        showSnackbar("已复制到剪贴板");
+        setTimeout(() => { copyText("").catch(() => {}); }, AUTO_CLEAR_MS);
+      })
+      .catch(() => showSnackbar("复制失败，请长按选择"));
+  });
+
+  btnClear.addEventListener("click", () => {
+    edtInput.value = "";
+    edtSalt.value  = "";
+    currentPassword = "";
+    renderPassword("");
+    edtInput.focus();
+  });
+
+  renderPassword("");
+})();
 </script>
 </body>
 </html>
